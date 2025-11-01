@@ -240,6 +240,13 @@ class EdataCoordinator(DataUpdateCoordinator):
 
         self._load_data()
 
+        # Store last API fetch time for user visibility
+        if self.last_update_success_time:
+            local_time = dt_util.as_local(self.last_update_success_time)
+            self._data[const.DATA_ATTRIBUTES]["last_api_fetch_time"] = local_time.strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+
         # Recalculate update interval for next run if using specific hour
         if self.update_hour is not None:
             self.update_interval = self._calculate_update_interval()
