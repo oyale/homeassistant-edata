@@ -89,7 +89,8 @@
           "billing": "Enable billing",
           "pvpc": "PVPC",
           "debug": "Enable debugging",
-          "surplus": "Compute surplus (unsupported for PVPC)"
+          "surplus": "Compute surplus (unsupported for PVPC)",
+          "update_hour": "Hour of day to retrieve data (0-23, leave empty for every 60 minutes)"
         }
       },
       "costs": {

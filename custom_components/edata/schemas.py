@@ -42,6 +42,14 @@ def OPTIONS_STEP_INIT(prev_options: dict[str, typing.Any]) -> dict[str, typing.A
             const.CONF_PVPC,
             default=prev_options.get(const.CONF_PVPC, False),
         ): bool,
+        vol.Optional(
+            const.CONF_UPDATE_HOUR,
+            default=prev_options.get(const.CONF_UPDATE_HOUR, const.DEFAULT_UPDATE_HOUR),
+        ): sel.NumberSelector(
+            config=sel.NumberSelectorConfig(
+                min=0, max=23, step=1, mode=sel.NumberSelectorMode.BOX
+            )
+        ),
     }
 
 

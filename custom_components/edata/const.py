@@ -24,6 +24,7 @@ CONF_VALUE_EUR = "value_eur"
 CONF_ENERGY_TERM = "energy_term"
 CONF_POWER_TERM = "power_term"
 CONF_OTHERS_TERM = "others_term"
+CONF_UPDATE_HOUR = "update_hour"
 
 # pricing settings
 PRICE_P1_KW_YEAR = "p1_kw_year_eur"
@@ -114,3 +115,6 @@ CUPS_CONTROL_DIGITS = "TRWAGMYFPDXBNJZSQVHLCKE"
 
 CACHE_MONTHS_SHORT = 13
 CACHE_MONTHS_LONG = 23
+
+# Update time settings
+DEFAULT_UPDATE_HOUR = None  # None means check every 60 minutes (old behavior)

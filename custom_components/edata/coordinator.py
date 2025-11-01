@@ -55,6 +55,7 @@ class EdataCoordinator(DataUpdateCoordinator):
         scups: str,
         authorized_nif: str,
         billing: PricingRules | None = None,
+        update_hour: int | None = None,
     ) -> None:
         """Initialize the data handler.."""
 
@@ -68,6 +69,7 @@ class EdataCoordinator(DataUpdateCoordinator):
         self.scups = scups.upper()
         self.id = scups.lower()
         self.billing_rules = billing
+        self.update_hour = update_hour
 
         # Check if v2023 storage has already been migrated
         migrate_pre2024_storage_if_needed(hass, self.cups, self.id)
@@ -172,8 +174,27 @@ class EdataCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=const.COORDINATOR_ID(self.id),
-            update_interval=timedelta(minutes=60),
+            update_interval=self._calculate_update_interval(),
         )
+
+    def _calculate_update_interval(self) -> timedelta:
+        """Calculate the update interval based on update_hour configuration."""
+        if self.update_hour is None:
+            # Default behavior: check every 60 minutes
+            return timedelta(minutes=60)
+        
+        # Calculate time until next scheduled update hour
+        now = dt_util.now()
+        target_time = now.replace(hour=self.update_hour, minute=0, second=0, microsecond=0)
+        
+        # If target time has passed today, schedule for tomorrow
+        if target_time <= now:
+            target_time += timedelta(days=1)
+        
+        time_until_update = target_time - now
+        
+        # Return the time until next update, or minimum 1 minute
+        return max(time_until_update, timedelta(minutes=1))
 
     @classmethod
     async def async_setup(
@@ -185,11 +206,12 @@ class EdataCoordinator(DataUpdateCoordinator):
         scups: str,
         authorized_nif: str,
         billing: PricingRules | None = None,
+        update_hour: int | None = None,
     ):
         """Async constructor."""
 
         return await hass.async_add_executor_job(
-            cls, hass, username, password, cups, scups, authorized_nif, billing
+            cls, hass, username, password, cups, scups, authorized_nif, billing, update_hour
         )
 
     async def _async_update_data(self, update_statistics=True):
@@ -208,6 +230,10 @@ class EdataCoordinator(DataUpdateCoordinator):
             await self.update_statistics()
 
         self._load_data()
+
+        # Recalculate update interval for next run if using specific hour
+        if self.update_hour is not None:
+            self.update_interval = self._calculate_update_interval()
 
         return self._data
 
