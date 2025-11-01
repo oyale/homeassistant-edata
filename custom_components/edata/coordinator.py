@@ -178,7 +178,14 @@ class EdataCoordinator(DataUpdateCoordinator):
         )
 
     def _calculate_update_interval(self) -> timedelta:
-        """Calculate the update interval based on update_hour configuration."""
+        """Calculate the update interval based on update_hour configuration.
+        
+        Returns:
+            timedelta: Time until next update. If update_hour is None, returns 60 minutes.
+                      If update_hour is set, returns time until next occurrence of that hour.
+                      If target hour has passed or is exactly now, schedules for tomorrow.
+                      Minimum return value is 1 minute.
+        """
         if self.update_hour is None:
             # Default behavior: check every 60 minutes
             return timedelta(minutes=60)
