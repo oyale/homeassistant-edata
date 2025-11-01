@@ -167,6 +167,9 @@ class EdataCoordinator(DataUpdateCoordinator):
 
         hass.data[const.DOMAIN][self.id]["dt_last"] = self._last_stats_dt
 
+        # Track last registered date to detect when new data is actually retrieved
+        self._previous_last_registered_date = None
+
         # Just the preamble of the statistics
         self._stat_id_preamble = f"{const.DOMAIN}:{self.id}"
 
@@ -240,12 +243,17 @@ class EdataCoordinator(DataUpdateCoordinator):
 
         self._load_data()
 
-        # Store last API fetch time for user visibility
-        if self.last_update_success_time:
-            local_time = dt_util.as_local(self.last_update_success_time)
-            self._data[const.DATA_ATTRIBUTES]["last_api_fetch_time"] = local_time.strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+        # Store last API fetch time ONLY when new data is actually retrieved
+        # Check if last_registered_date has changed (indicating new data from API)
+        current_last_registered_date = self._data[const.DATA_ATTRIBUTES].get("last_registered_date")
+        if current_last_registered_date and current_last_registered_date != self._previous_last_registered_date:
+            # New data was retrieved, update the timestamp
+            if self.last_update_success_time:
+                local_time = dt_util.as_local(self.last_update_success_time)
+                self._data[const.DATA_ATTRIBUTES]["last_new_data_time"] = local_time.strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+            self._previous_last_registered_date = current_last_registered_date
 
         # Recalculate update interval for next run if using specific hour
         if self.update_hour is not None:
