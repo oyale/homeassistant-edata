@@ -183,7 +183,7 @@ class EdataCoordinator(DataUpdateCoordinator):
         Returns:
             timedelta: Time until next update. If update_hour is None, returns 60 minutes.
                       If update_hour is set, returns time until next occurrence of that hour.
-                      If target hour has passed or is exactly now, schedules for tomorrow.
+                      If target hour has passed (or within 1 minute), schedules for tomorrow.
                       Minimum return value is 1 minute.
         """
         if self.update_hour is None:
@@ -194,14 +194,16 @@ class EdataCoordinator(DataUpdateCoordinator):
         now = dt_util.now()
         target_time = now.replace(hour=self.update_hour, minute=0, second=0, microsecond=0)
         
-        # If target time has passed today, schedule for tomorrow
-        if target_time <= now:
-            target_time += timedelta(days=1)
-        
+        # Calculate time difference
         time_until_update = target_time - now
         
-        # Return the time until next update, or minimum 1 minute
-        return max(time_until_update, timedelta(minutes=1))
+        # If target time has passed or is within 1 minute, schedule for tomorrow
+        # This prevents scheduling for "now" after an update just completed
+        if time_until_update < timedelta(minutes=1):
+            target_time += timedelta(days=1)
+            time_until_update = target_time - now
+        
+        return time_until_update
 
     @classmethod
     async def async_setup(
