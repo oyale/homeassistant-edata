@@ -85,6 +85,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         pricing_rules = None
 
+    # Get update hour from options
+    update_hour = entry.options.get(const.CONF_UPDATE_HOUR, const.DEFAULT_UPDATE_HOUR)
+    
     coordinator = await EdataCoordinator.async_setup(
         hass,
         usr,
@@ -93,6 +96,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         scups,
         authorized_nif,
         pricing_rules,
+        update_hour,
     )
     hass.data[const.DOMAIN][scups.lower()]["coordinator"] = coordinator
 
@@ -138,6 +142,13 @@ async def options_update_listener(hass: HomeAssistant, entry: ConfigEntry):
     _LOGGER.debug("%s: options changed", scups)
     data = hass.data[const.DOMAIN][scups.lower()]
     coor: EdataCoordinator = data["coordinator"]
+
+    # Update the update hour if it has changed
+    new_update_hour = entry.options.get(const.CONF_UPDATE_HOUR, const.DEFAULT_UPDATE_HOUR)
+    if coor.update_hour != new_update_hour:
+        coor.update_hour = new_update_hour
+        coor.update_interval = coor._calculate_update_interval()
+        _LOGGER.info("%s: update hour changed to %s", scups, new_update_hour)
 
     await coor.update_billing(
         entry.options,

@@ -89,7 +89,8 @@
           "billing": "Activar facturación",
           "pvpc": "PVPC",
           "debug": "Activar depuración",
-          "surplus": "Cálculo de excedente (no soportado con PVPC)"
+          "surplus": "Cálculo de excedente (no soportado con PVPC)",
+          "update_hour": "Hora del día para obtener datos (0-23, opcional: dejar vacío para verificar cada 60 minutos)"
         }
       },
       "costs": {

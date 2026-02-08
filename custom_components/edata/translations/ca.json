@@ -86,7 +86,8 @@
         "title": "Configuració",
         "data": {
           "billing": "Activa la facturació",
-          "pvpc": "PVPC"
+          "pvpc": "PVPC",
+          "update_hour": "Hora del dia per obtenir dades (0-23, opcional: deixar buit per verificar cada 60 minuts)"
         }
       },
       "costs": {

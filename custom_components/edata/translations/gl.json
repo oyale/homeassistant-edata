@@ -87,7 +87,8 @@
         "title": "Configuración",
         "data": {
           "billing": "Activar facturación",
-          "pvpc": "PVPC"
+          "pvpc": "PVPC",
+          "update_hour": "Hora do día para obter datos (0-23, opcional: deixar baleiro para verificar cada 60 minutos)"
         }
       },
       "costs": {

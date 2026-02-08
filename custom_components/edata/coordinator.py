@@ -56,6 +56,7 @@ class EdataCoordinator(DataUpdateCoordinator):
         scups: str,
         authorized_nif: str,
         billing: PricingRules | None = None,
+        update_hour: int | None = None,
     ) -> None:
         """Initialize the data handler.."""
 
@@ -69,6 +70,7 @@ class EdataCoordinator(DataUpdateCoordinator):
         self.scups = scups.upper()
         self.id = scups.lower()
         self.billing_rules = billing
+        self.update_hour = update_hour
 
         # Check if v2023 storage has already been migrated
         migrate_pre2024_storage_if_needed(hass, self.cups, self.id)
@@ -166,6 +168,9 @@ class EdataCoordinator(DataUpdateCoordinator):
 
         hass.data[const.DOMAIN][self.id]["dt_last"] = self._last_stats_dt
 
+        # Track last registered date to detect when new data is actually retrieved
+        self._previous_last_registered_date = None
+
         # Just the preamble of the statistics
         self._stat_id_preamble = f"{const.DOMAIN}:{self.id}"
 
@@ -173,8 +178,36 @@ class EdataCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=const.COORDINATOR_ID(self.id),
-            update_interval=timedelta(minutes=60),
+            update_interval=self._calculate_update_interval(),
         )
+
+    def _calculate_update_interval(self) -> timedelta:
+        """Calculate the update interval based on update_hour configuration.
+        
+        Returns:
+            timedelta: Time until next update. If update_hour is None, returns 60 minutes.
+                      If update_hour is set, returns time until next occurrence of that hour.
+                      If target hour has passed (or within 1 minute), schedules for tomorrow.
+                      Minimum return value is 1 minute.
+        """
+        if self.update_hour is None:
+            # Default behavior: check every 60 minutes
+            return timedelta(minutes=60)
+        
+        # Calculate time until next scheduled update hour
+        now = dt_util.now()
+        target_time = now.replace(hour=self.update_hour, minute=0, second=0, microsecond=0)
+        
+        # Calculate time difference
+        time_until_update = target_time - now
+        
+        # If target time has passed or is within 1 minute, schedule for tomorrow
+        # This prevents scheduling for "now" after an update just completed
+        if time_until_update < timedelta(minutes=1):
+            target_time += timedelta(days=1)
+            time_until_update = target_time - now
+        
+        return time_until_update
 
     @classmethod
     async def async_setup(
@@ -186,11 +219,12 @@ class EdataCoordinator(DataUpdateCoordinator):
         scups: str,
         authorized_nif: str,
         billing: PricingRules | None = None,
+        update_hour: int | None = None,
     ):
         """Async constructor."""
 
         return await hass.async_add_executor_job(
-            cls, hass, username, password, cups, scups, authorized_nif, billing
+            cls, hass, username, password, cups, scups, authorized_nif, billing, update_hour
         )
 
     async def _async_update_data(self, update_statistics=True):
@@ -208,6 +242,22 @@ class EdataCoordinator(DataUpdateCoordinator):
             await self.update_statistics()
 
         await self._load_data()
+
+        # Store last API fetch time ONLY when new data is actually retrieved
+        # Check if last_registered_date has changed (indicating new data from API)
+        current_last_registered_date = self._data[const.DATA_ATTRIBUTES].get("last_registered_date")
+        if current_last_registered_date and current_last_registered_date != self._previous_last_registered_date:
+            # New data was retrieved, update the timestamp
+            if self.last_update_success_time:
+                local_time = dt_util.as_local(self.last_update_success_time)
+                self._data[const.DATA_ATTRIBUTES]["last_new_data_time"] = local_time.strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+            self._previous_last_registered_date = current_last_registered_date
+
+        # Recalculate update interval for next run if using specific hour
+        if self.update_hour is not None:
+            self.update_interval = self._calculate_update_interval()
 
         return self._data
 
